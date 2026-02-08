@@ -43,15 +43,13 @@ public class DataFixtures {
     }
 
     @Bean
-    public List<Reparacion> reparaciones(ReparacionRepository reparacionRepository,
-                                         List<Coche> coches,
-                                         List<Mecanico> mecanicos) {
+    public List<Reparacion> reparaciones(ReparacionRepository reparacionRepository, List<Coche> coches, List<Mecanico> mecanicos) {
         List<Reparacion> lista = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             lista.add(reparacionRepository.save(new Reparacion(
-                    coches.get(i),
-                    mecanicos.get(i % mecanicos.size()),
-                    "Reparación ejemplo " + (i + 1)
+                coches.get(i),
+                mecanicos.get(i % mecanicos.size()),
+                "Reparación ejemplo " + (i + 1)
             )));
         }
         return lista;
