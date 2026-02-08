@@ -1,0 +1,42 @@
+version: '3.9'
+
+#Mariadb
+services:
+  db:
+    image: mariadb:11.1
+    container_name: taller-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: tallerdb
+      MYSQL_USER: talleruser
+      MYSQL_PASSWORD: tallerpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - taller-net
+
+#Tomcat
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taller-app
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/tallerdb
+      SPRING_DATASOURCE_USERNAME: talleruser
+      SPRING_DATASOURCE_PASSWORD: tallerpass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    networks:
+      - taller-net
+
+volumes:
+  db_data:
+
+networks:
+  taller-net:

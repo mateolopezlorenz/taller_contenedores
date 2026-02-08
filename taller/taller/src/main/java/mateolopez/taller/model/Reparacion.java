@@ -30,8 +30,7 @@ public class Reparacion {
     private Double precio;
 
     //Constructor 
-    public Reparacion() {
-    }
+    public Reparacion() {}
 
     public Reparacion(Coche coche, Mecanico mecanico, LocalDate fecha, String descripcion, Integer horas, Double precio) {
         this.coche = coche;
@@ -41,6 +40,16 @@ public class Reparacion {
         this.horas = horas;
         this.precio = precio;
     }
+
+    public Reparacion(Coche coche, Mecanico mecanico, String descripcion) {
+        this.coche = coche;
+        this.mecanico = mecanico;
+        this.descripcion = descripcion;
+        this.fecha = LocalDate.now();
+        this.horas = 1;      
+        this.precio = 50.0;  
+    }
+
 
     // Getters y setters
     public Long getId() {

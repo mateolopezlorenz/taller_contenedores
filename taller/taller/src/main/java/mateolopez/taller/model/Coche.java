@@ -20,8 +20,7 @@ public class Coche {
     private String modelo;
 
     //Constructor 
-    public Coche() {
-    }
+    public Coche() {}
 
     public Coche(String matricula, String marca, String modelo) {
         this.matricula = matricula;
