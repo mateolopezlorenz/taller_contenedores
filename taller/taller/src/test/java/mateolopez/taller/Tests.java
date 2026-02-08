@@ -3,11 +3,10 @@ package mateolopez.taller;
 import mateolopez.taller.model.Coche;
 import mateolopez.taller.model.Mecanico;
 import mateolopez.taller.model.Reparacion;
+import mateolopez.taller.repository.CocheRepository;
 import mateolopez.taller.repository.MecanicoRepository;
 import mateolopez.taller.repository.ReparacionRepository;
-import mateolopez.taller.repository.CocheRepository;
 import jakarta.persistence.EntityManager;
-
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,380 +39,303 @@ public class Tests {
     @Autowired
     private EntityManager entityManager;
 
-    // ------------------------
-    // Tests unitarios de repositorio (solo 5 primeros)
-    // ------------------------
-
+    // Tests unitarios
     @Test
     void testCantidadCoches() {
-        // Deben haber 10 coches cargados por DataFixtures
         assertEquals(10, cocheRepository.findAll().size());
     }
 
     @Test
     void testCocheNoNull() {
-        // Ningún coche debe ser null
         cocheRepository.findAll().forEach(c -> assertNotNull(c));
     }
 
     @Test
     void testIdsCoche() {
-        // Todos los coches deben tener un ID asignado
         cocheRepository.findAll().forEach(c -> assertNotNull(c.getId()));
     }
 
     @Test
     void testMatriculasUnicas() {
-        // Todas las matrículas deben ser únicas
         List<Coche> coches = cocheRepository.findAll();
         long uniqueCount = coches.stream().map(Coche::getMatricula).distinct().count();
         assertEquals(coches.size(), uniqueCount);
     }
 
     @Test
-    void testDatosCoche1() {
-        // El primer coche debe tener marca, modelo y matrícula
+    void testAddCar() {
+        Coche c = new Coche("NEW123", "Toyota", "Corolla");
+        cocheRepository.save(c);
+        entityManager.flush();
+        assertNotNull(c.getId());
+    }
+
+    @Test
+    void testUpdateCar() {
         Coche c = cocheRepository.findAll().get(0);
-        assertNotNull(c.getMarca());
-        assertNotNull(c.getModelo());
-        assertNotNull(c.getMatricula());
+        c.setMarca("UpdatedBrand");
+        c.setModelo("UpdatedModel");
+        cocheRepository.save(c);
+        entityManager.flush();
+        Coche actualizado = cocheRepository.findById(c.getId()).orElseThrow();
+        assertEquals("UpdatedBrand", actualizado.getMarca());
+        assertEquals("UpdatedModel", actualizado.getModelo());
     }
 
-    // ------------------------
-// Tests de integración (bloque siguiente 5)
-// ------------------------
-@Test void testRelacionCocheReparacion() {
-    reparacionRepository.findAll().forEach(r -> {
-        assertNotNull(r.getCoche());
-        assertNotNull(r.getMecanico());
-    });
-}
-
-@Test void testDatosCoche() {
-    Coche c = cocheRepository.findAll().get(0);
-    assertNotNull(c.getMarca());
-    assertNotNull(c.getModelo());
-    assertNotNull(c.getMatricula());
-}
-
-@Test void testDatosMecanico() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    assertNotNull(m.getNombre());
-}
-
-@Test void testDatosReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    assertNotNull(r.getDescripcion());
-    assertNotNull(r.getFecha());
-    assertNotNull(r.getHoras());
-    assertNotNull(r.getPrecio());
-}
-
-@Test void testRelacionCocheMultipleReparaciones() {
-    Coche c = cocheRepository.findAll().get(0);
-    long count = reparacionRepository.findAll().stream()
-            .filter(r -> r.getCoche().getId().equals(c.getId()))
-            .count();
-    assertTrue(count >= 1);
-}
-
-    @Test void testCrearVariasReparaciones() {
-    Coche c = cocheRepository.findAll().get(1);
-    Mecanico m = mecanicoRepository.findAll().get(1);
-    for (int i = 0; i < 5; i++) {
-        reparacionRepository.save(
-                new Reparacion(c, m, LocalDate.now(), "Multi " + i, 1, 30.0 + i));
+    @Test
+    void testDeleteCar() {
+        Coche c = cocheRepository.save(new Coche("DEL123", "Honda", "Civic"));
+        Long id = c.getId();
+        cocheRepository.delete(c);
+        entityManager.flush();
+        assertFalse(cocheRepository.findById(id).isPresent());
     }
-    long count = reparacionRepository.findAll().stream()
-            .filter(r -> r.getCoche().getId().equals(c.getId()) &&
-                         r.getMecanico().getId().equals(m.getId()))
-            .count();
-    assertTrue(count >= 5);
-}
 
-@Test void testActualizarHorasYPrecioReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    r.setHoras(10);
-    r.setPrecio(500.0);
-    reparacionRepository.save(r);
-    Reparacion actualizado = reparacionRepository.findById(r.getId()).orElseThrow();
-    assertEquals(10, actualizado.getHoras());
-    assertEquals(500.0, actualizado.getPrecio());
-}
-
-@Test void testCrearCocheDuplicadoMatricula() {
-    assertThrows(Exception.class, () -> {
-        cocheRepository.save(new Coche("1111AAA", "Duplicado", "Test"));
+    @Test
+    void testAddMecanico() {
+        Mecanico m = new Mecanico("Carlos", "Lopez");
+        mecanicoRepository.save(m);
         entityManager.flush();
-    });
-}
-
-@Test void testCrearReparacionSinCoche() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(
-                new Reparacion(null, m, LocalDate.now(), "Sin coche", 1, 50.0));
-        entityManager.flush();
-    });
-}
-
-@Test void testCrearReparacionSinMecanico() {
-    Coche c = cocheRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(
-                new Reparacion(c, null, LocalDate.now(), "Sin mecanico", 1, 50.0));
-        entityManager.flush();
-    });
-}
-
-// ------------------------
-// Siguientes 5 tests de aceptación
-// ------------------------
-
-@Test void testActualizarCoche() {
-    Coche c = cocheRepository.findAll().get(0);
-    c.setMarca("UpdatedBrand");
-    cocheRepository.save(c);
-    entityManager.flush(); // forzar sincronización con BD
-    assertEquals("UpdatedBrand",
-            cocheRepository.findById(c.getId()).orElseThrow().getMarca());
-}
-
-@Test void testActualizarMecanico() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    m.setNombre("UpdatedName");
-    mecanicoRepository.save(m);
-    entityManager.flush();
-    assertEquals("UpdatedName",
-            mecanicoRepository.findById(m.getId()).orElseThrow().getNombre());
-}
-
-@Test void testActualizarReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    r.setDescripcion("Actualizado");
-    reparacionRepository.save(r);
-    entityManager.flush();
-    assertEquals("Actualizado",
-            reparacionRepository.findById(r.getId()).orElseThrow().getDescripcion());
-}
-
-@Test void testEliminarCoche() {
-    Coche c = cocheRepository.save(new Coche("ZZZZ999", "Renault", "Clio"));
-    Long id = c.getId();
-    cocheRepository.delete(c);
-    entityManager.flush();
-    assertFalse(cocheRepository.findById(id).isPresent());
-}
-
-@Test void testEliminarMecanico() {
-    Mecanico m = mecanicoRepository.save(new Mecanico("Pedro", "Garcia"));
-    Long id = m.getId();
-    mecanicoRepository.delete(m);
-    entityManager.flush();
-    assertFalse(mecanicoRepository.findById(id).isPresent());
-}
-
-// ------------------------
-// Siguientes 10 tests de aceptación
-// ------------------------
-
-@Test void testEliminarReparacion() {
-    Coche c = cocheRepository.findAll().get(0);
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    Reparacion r = reparacionRepository.save(new Reparacion(c, m, LocalDate.now(), "Eliminar prueba", 1, 50.0));
-    Long id = r.getId();
-    reparacionRepository.delete(r);
-    entityManager.flush();
-    assertFalse(reparacionRepository.findById(id).isPresent());
-}
-
-@Test void testCrearVariasReparaciones1() {
-    Coche c = cocheRepository.findAll().get(1);
-    Mecanico m = mecanicoRepository.findAll().get(1);
-    for (int i = 0; i < 5; i++) {
-        reparacionRepository.save(new Reparacion(c, m, LocalDate.now(), "Multi " + i, 1, 30.0 + i));
+        assertNotNull(m.getId());
     }
-    entityManager.flush();
-    long count = reparacionRepository.findAll().stream()
-            .filter(r -> r.getCoche().getId().equals(c.getId()))
-            .count();
-    assertTrue(count >= 5);
-}
 
-@Test void testActualizarHorasYPrecioReparacion1() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    r.setHoras(10);
-    r.setPrecio(500.0);
-    reparacionRepository.save(r);
-    entityManager.flush();
-    Reparacion actualizado = reparacionRepository.findById(r.getId()).orElseThrow();
-    assertEquals(10, actualizado.getHoras());
-    assertEquals(500.0, actualizado.getPrecio());
-}
-
-@Test void testCrearCocheDuplicadoMatricula1() {
-    assertThrows(Exception.class, () -> {
-        cocheRepository.save(new Coche("1111AAA", "Duplicado", "Test"));
+    @Test
+    void testUpdateMecanico() {
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        m.setNombre("UpdatedName");
+        mecanicoRepository.save(m);
         entityManager.flush();
-    });
-}
+        Mecanico actualizado = mecanicoRepository.findById(m.getId()).orElseThrow();
+        assertEquals("UpdatedName", actualizado.getNombre());
+    }
 
-@Test void testCrearMecanicoDuplicadoNombre() {
-    Mecanico m = new Mecanico("Juan", "Pérez");
-    Mecanico guardado = mecanicoRepository.save(m);
-    entityManager.flush();
-    assertNotNull(guardado.getId());
-}
-
-@Test void testCrearReparacionSinCoche1() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(new Reparacion(null, m, LocalDate.now(), "Sin coche", 1, 50.0));
+    @Test
+    void testDeleteMecanico() {
+        Mecanico m = mecanicoRepository.save(new Mecanico("Eliminar", "Apellido"));
+        Long id = m.getId();
+        mecanicoRepository.delete(m);
         entityManager.flush();
-    });
-}
+        assertFalse(mecanicoRepository.findById(id).isPresent());
+    }
 
-@Test void testCrearReparacionSinMecanico1() {
-    Coche c = cocheRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(new Reparacion(c, null, LocalDate.now(), "Sin mecanico", 1, 50.0));
+    @Test
+    void testCrearCocheDuplicadoMatricula() {
+        assertThrows(Exception.class, () -> {
+            cocheRepository.save(new Coche("1111AAA", "Duplicado", "Test"));
+            entityManager.flush();
+        });
+    }
+
+    @Test
+    void testCrearMecanicoDuplicadoNombre() {
+        Mecanico m = new Mecanico("Juan", "Pérez");
+        mecanicoRepository.save(m);
         entityManager.flush();
-    });
-}
+        assertNotNull(m.getId());
+    }
 
-@Test void testActualizarMatriculaCoche() {
-    Coche c = cocheRepository.findAll().get(0);
-    String old = c.getMatricula();
-    c.setMatricula("NEW1234");
+    // Tests de integración
+    @Test
+    void testRelacionCocheReparacion() {
+        reparacionRepository.findAll().forEach(r -> {
+            assertNotNull(r.getCoche());
+            assertNotNull(r.getMecanico());
+        });
+    }
+
+    @Test
+    void testRelacionCocheMultipleReparaciones() {
+        Coche c = cocheRepository.findAll().get(0);
+        long count = reparacionRepository.findAll().stream()
+                .filter(r -> r.getCoche().getId().equals(c.getId()))
+                .count();
+        assertTrue(count >= 1);
+    }
+
+    @Test
+    void testAddReparacion() {
+        Coche c = cocheRepository.findAll().get(0);
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        Reparacion r = new Reparacion(c, m, LocalDate.now(), "Cambio aceite", 2, 50.0);
+        reparacionRepository.save(r);
+        entityManager.flush();
+        assertNotNull(r.getId());
+    }
+
+    @Test
+    void testActualizarReparacion() {
+        Reparacion r = reparacionRepository.findAll().get(0);
+        r.setDescripcion("Actualizado");
+        r.setHoras(5);
+        r.setPrecio(150.0);
+        reparacionRepository.save(r);
+        entityManager.flush();
+        Reparacion actualizado = reparacionRepository.findById(r.getId()).orElseThrow();
+        assertEquals("Actualizado", actualizado.getDescripcion());
+        assertEquals(5, actualizado.getHoras());
+        assertEquals(150.0, actualizado.getPrecio());
+    }
+
+    @Test
+    void testEliminarReparacion() {
+        Coche c = cocheRepository.findAll().get(0);
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        Reparacion r = reparacionRepository.save(new Reparacion(c, m, LocalDate.now(), "Eliminar prueba", 1, 50.0));
+        Long id = r.getId();
+        reparacionRepository.delete(r);
+        entityManager.flush();
+        assertFalse(reparacionRepository.findById(id).isPresent());
+    }
+
+    @Test
+    void testCrearReparacionSinCoche() {
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        assertThrows(Exception.class, () -> {
+            reparacionRepository.save(new Reparacion(null, m, LocalDate.now(), "Sin coche", 1, 50.0));
+            entityManager.flush();
+        });
+    }
+
+    @Test
+    void testCrearReparacionSinMecanico() {
+        Coche c = cocheRepository.findAll().get(0);
+        assertThrows(Exception.class, () -> {
+            reparacionRepository.save(new Reparacion(c, null, LocalDate.now(), "Sin mecanico", 1, 50.0));
+            entityManager.flush();
+        });
+    }
+
+    // Tests de aceptación
+    @Test
+    void testCrearVariasReparaciones() {
+        Coche c = cocheRepository.findAll().get(1);
+        Mecanico m = mecanicoRepository.findAll().get(1);
+        for (int i = 0; i < 5; i++) {
+            reparacionRepository.save(new Reparacion(c, m, LocalDate.now(), "Multi " + i, 1, 30.0 + i));
+        }
+        entityManager.flush();
+        long count = reparacionRepository.findAll().stream()
+                .filter(r -> r.getCoche().getId().equals(c.getId()) && r.getMecanico().getId().equals(m.getId()))
+                .count();
+        assertTrue(count >= 5);
+    }
+
+    @Test
+    void testEliminarCocheConReparaciones() {
+        Coche c = cocheRepository.findAll().get(0);
+        reparacionRepository.findAll().stream()
+                .filter(r -> r.getCoche().getId().equals(c.getId()))
+                .forEach(reparacionRepository::delete);
+        entityManager.flush();
+        cocheRepository.delete(c);
+        entityManager.flush();
+        assertFalse(cocheRepository.findById(c.getId()).isPresent());
+    }
+
+    @Test
+    void testEliminarMecanicoConReparaciones() {
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        reparacionRepository.findAll().stream()
+                .filter(r -> r.getMecanico().getId().equals(m.getId()))
+                .forEach(reparacionRepository::delete);
+        entityManager.flush();
+        mecanicoRepository.delete(m);
+        entityManager.flush();
+        assertFalse(mecanicoRepository.findById(m.getId()).isPresent());
+    }
+
+    @Test
+    void testActualizarDescripcionReparacion() {
+        Reparacion r = reparacionRepository.findAll().get(0);
+        r.setDescripcion("Descripcion Actualizada");
+        reparacionRepository.save(r);
+        entityManager.flush();
+        assertEquals("Descripcion Actualizada", reparacionRepository.findById(r.getId()).orElseThrow().getDescripcion());
+    }
+
+    @Test
+    void testActualizarFechaReparacion() {
+        Reparacion r = reparacionRepository.findAll().get(0);
+        LocalDate nuevaFecha = LocalDate.now().minusDays(5);
+        r.setFecha(nuevaFecha);
+        reparacionRepository.save(r);
+        entityManager.flush();
+        assertEquals(nuevaFecha, reparacionRepository.findById(r.getId()).orElseThrow().getFecha());
+    }
+
+    @Test
+    void testCrearCocheConMatriculaUnica() {
+        Coche c = new Coche("UNIQUE123", "MarcaTest", "ModeloTest");
+        cocheRepository.save(c);
+        entityManager.flush();
+        assertNotNull(c.getId());
+    }
+
+    @Test
+    void testCrearMecanicoNuevo() {
+        Mecanico m = new Mecanico("NuevoNombre", "NuevoApellido");
+        mecanicoRepository.save(m);
+        entityManager.flush();
+        assertNotNull(m.getId());
+    }
+
+    @Test
+    void testCrearReparacionVariasHorasYPrecio() {
+        Coche c = cocheRepository.findAll().get(0);
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        Reparacion r = new Reparacion(c, m, LocalDate.now(), "Varias horas y precio", 5, 200.0);
+        reparacionRepository.save(r);
+        entityManager.flush();
+        Reparacion guardada = reparacionRepository.findById(r.getId()).orElseThrow();
+        assertEquals(5, guardada.getHoras());
+        assertEquals(200.0, guardada.getPrecio());
+    }
+
+    @Test
+    void testActualizarTodosLosCamposReparacion() {
+        Reparacion r = reparacionRepository.findAll().get(0);
+        r.setDescripcion("Completa");
+        r.setHoras(8);
+        r.setPrecio(350.0);
+        r.setFecha(LocalDate.now().minusDays(2));
+        reparacionRepository.save(r);
+        entityManager.flush();
+        Reparacion actualizado = reparacionRepository.findById(r.getId()).orElseThrow();
+        assertEquals("Completa", actualizado.getDescripcion());
+        assertEquals(8, actualizado.getHoras());
+        assertEquals(350.0, actualizado.getPrecio());
+        assertEquals(LocalDate.now().minusDays(2), actualizado.getFecha());
+    }
+
+    @Test
+void testCantidadCochesDespuesDeAdd() {
+    int antes = cocheRepository.findAll().size();
+    Coche c = new Coche("EXTRA123", "Ford", "Fiesta");
     cocheRepository.save(c);
     entityManager.flush();
-    assertEquals("NEW1234", cocheRepository.findById(c.getId()).orElseThrow().getMatricula());
-    // revertir
-    c.setMatricula(old);
-    cocheRepository.save(c);
-    entityManager.flush();
+    int despues = cocheRepository.findAll().size();
+    assertEquals(antes + 1, despues);
 }
 
-@Test void testActualizarMarcaYModeloCoche() {
-    Coche c = cocheRepository.findAll().get(0);
-    c.setMarca("MarcaTest");
-    c.setModelo("ModeloTest");
-    cocheRepository.save(c);
-    entityManager.flush();
-    Coche actualizado = cocheRepository.findById(c.getId()).orElseThrow();
-    assertEquals("MarcaTest", actualizado.getMarca());
-    assertEquals("ModeloTest", actualizado.getModelo());
-}
-
-@Test void testActualizarNombreYApellidoMecanico() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    m.setNombre("NombreTest");
+@Test
+void testCantidadMecanicosDespuesDeAdd() {
+    int antes = mecanicoRepository.findAll().size();
+    Mecanico m = new Mecanico("ExtraNombre", "ExtraApellido");
     mecanicoRepository.save(m);
     entityManager.flush();
-    Mecanico actualizado = mecanicoRepository.findById(m.getId()).orElseThrow();
-    assertEquals("NombreTest", actualizado.getNombre());
+    int despues = mecanicoRepository.findAll().size();
+    assertEquals(antes + 1, despues);
 }
 
-// ------------------------
-// Últimos 10 tests de aceptación
-// ------------------------
-
-@Test void testEliminarCocheConReparaciones() {
-    Coche c = cocheRepository.findAll().get(0);
-    // eliminar sus reparaciones primero
-    reparacionRepository.findAll().stream()
-            .filter(r -> r.getCoche().getId().equals(c.getId()))
-            .forEach(reparacionRepository::delete);
-    entityManager.flush();
-    cocheRepository.delete(c);
-    entityManager.flush();
-    assertFalse(cocheRepository.findById(c.getId()).isPresent());
-}
-
-@Test void testEliminarMecanicoConReparaciones() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    reparacionRepository.findAll().stream()
-            .filter(r -> r.getMecanico().getId().equals(m.getId()))
-            .forEach(reparacionRepository::delete);
-    entityManager.flush();
-    mecanicoRepository.delete(m);
-    entityManager.flush();
-    assertFalse(mecanicoRepository.findById(m.getId()).isPresent());
-}
-
-@Test void testCrearReparacionVariasHorasYPrecio() {
+@Test
+void testCantidadReparacionesDespuesDeAdd() {
+    int antes = reparacionRepository.findAll().size();
     Coche c = cocheRepository.findAll().get(0);
     Mecanico m = mecanicoRepository.findAll().get(0);
-    Reparacion r = new Reparacion(c, m, LocalDate.now(), "Varias horas y precio", 5, 200.0);
+    Reparacion r = new Reparacion(c, m, LocalDate.now(), "Extra reparación", 2, 100.0);
     reparacionRepository.save(r);
     entityManager.flush();
-    Reparacion guardada = reparacionRepository.findById(r.getId()).orElseThrow();
-    assertEquals(5, guardada.getHoras());
-    assertEquals(200.0, guardada.getPrecio());
+    int despues = reparacionRepository.findAll().size();
+    assertEquals(antes + 1, despues);
 }
-
-@Test void testActualizarDescripcionReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    r.setDescripcion("Descripcion Actualizada");
-    reparacionRepository.save(r);
-    entityManager.flush();
-    assertEquals("Descripcion Actualizada",
-            reparacionRepository.findById(r.getId()).orElseThrow().getDescripcion());
-}
-
-@Test void testActualizarFechaReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    LocalDate nuevaFecha = LocalDate.now().minusDays(5);
-    r.setFecha(nuevaFecha);
-    reparacionRepository.save(r);
-    entityManager.flush();
-    assertEquals(nuevaFecha,
-            reparacionRepository.findById(r.getId()).orElseThrow().getFecha());
-}
-
-@Test void testNoPermitirCocheNullEnReparacion() {
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(new Reparacion(null, m, LocalDate.now(), "Null coche", 1, 50.0));
-        entityManager.flush();
-    });
-}
-
-@Test void testNoPermitirMecanicoNullEnReparacion() {
-    Coche c = cocheRepository.findAll().get(0);
-    assertThrows(Exception.class, () -> {
-        reparacionRepository.save(new Reparacion(c, null, LocalDate.now(), "Null mecanico", 1, 50.0));
-        entityManager.flush();
-    });
-}
-
-@Test void testCrearCocheConMatriculaUnica() {
-    Coche c = new Coche("UNIQUE123", "MarcaTest", "ModeloTest");
-    cocheRepository.save(c);
-    entityManager.flush();
-    assertNotNull(c.getId());
-}
-
-@Test void testCrearMecanicoNuevo() {
-    Mecanico m = new Mecanico("NuevoNombre", "NuevoApellido");
-    mecanicoRepository.save(m);
-    entityManager.flush();
-    assertNotNull(m.getId());
-}
-
-@Test void testActualizarTodosLosCamposReparacion() {
-    Reparacion r = reparacionRepository.findAll().get(0);
-    r.setDescripcion("Completa");
-    r.setHoras(8);
-    r.setPrecio(350.0);
-    r.setFecha(LocalDate.now().minusDays(2));
-    reparacionRepository.save(r);
-    entityManager.flush();
-    Reparacion actualizado = reparacionRepository.findById(r.getId()).orElseThrow();
-    assertEquals("Completa", actualizado.getDescripcion());
-    assertEquals(8, actualizado.getHoras());
-    assertEquals(350.0, actualizado.getPrecio());
-    assertEquals(LocalDate.now().minusDays(2), actualizado.getFecha());
-}
-
 }
