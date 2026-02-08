@@ -1,0 +1,52 @@
+name: CI/CD Fase 3
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: mariadb:11.1
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root123
+          MYSQL_DATABASE: tallerdb
+          MYSQL_USER: talleruser
+          MYSQL_PASSWORD: tallerpass
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      #Configuración de Java
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      #Ejecución de tests
+      - name: Build and run tests
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mariadb://localhost:3306/tallerdb
+          SPRING_DATASOURCE_USERNAME: talleruser
+          SPRING_DATASOURCE_PASSWORD: tallerpass
+        run: mvn clean test
+
+      #Build de la imagen 
+      - name: Build Docker image
+        run: docker build -t taller-app .
