@@ -20,6 +20,11 @@ public class CocheController {
         return cocheRepository.findAll();
     }
 
+    @PostMapping
+    public Coche crearCoche(@RequestBody Coche coche) {
+        return cocheRepository.save(coche);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Coche> getCocheById(@PathVariable Long id) {
         return cocheRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());

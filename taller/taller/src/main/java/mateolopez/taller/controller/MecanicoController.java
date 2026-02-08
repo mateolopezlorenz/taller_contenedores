@@ -26,4 +26,9 @@ public class MecanicoController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    
+    @PostMapping
+    public Mecanico createMecanico(@RequestBody Mecanico mecanico) {
+        return mecanicoRepository.save(mecanico);
+    }
 }

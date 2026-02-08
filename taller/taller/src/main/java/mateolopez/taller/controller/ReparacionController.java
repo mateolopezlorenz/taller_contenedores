@@ -36,4 +36,9 @@ public class ReparacionController {
     public List<Reparacion> getReparacionesByMecanico(@PathVariable Long id) {
         return reparacionRepository.findByMecanicoId(id);
     }
+
+    @PostMapping
+    public Reparacion createReparacion(@RequestBody Reparacion reparacion) {
+        return reparacionRepository.save(reparacion);
+    }
 }
