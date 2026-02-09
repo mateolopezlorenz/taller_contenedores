@@ -2,9 +2,9 @@ name: CI/CD Fase 3
 
 on:
   push:
-    branches: [ main ]
+    branches: main
   pull_request:
-    branches: [ main ]
+    branches: main
 
 jobs:
   build-and-test:
@@ -47,6 +47,10 @@ jobs:
           SPRING_DATASOURCE_USERNAME: talleruser
           SPRING_DATASOURCE_PASSWORD: tallerpass
         run: mvn clean test
+
+      - name: Package application
+        working-directory: taller/taller
+        run: mvn clean package -DskipTests
 
       - name: Build Docker image
         working-directory: taller/taller
