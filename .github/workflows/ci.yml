@@ -22,11 +22,6 @@ jobs:
           MYSQL_DATABASE: tallerdb
           MYSQL_USER: talleruser
           MYSQL_PASSWORD: tallerpass
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -u root -proot123"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
       - name: Checkout code
