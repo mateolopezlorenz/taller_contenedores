@@ -1,15 +1,20 @@
 name: CI/CD Fase 3
 
+#Cuando se sube algo a la rama que especificamos a continuación, se ejecuta el workflow.
 on:
+  #Especificamos la rama donde se ejecuta a la hora de subir archivos (hacer push).
   push:
     branches: main
+  #Especificamos la rama donde se ejecuta a la hora de hacer un pull request.
   pull_request:
     branches: main
 
+#Definimos los jobs que se ejecutarán a la hora de hacer push o pull request.
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    #Definimos los servicios, que en este caso es solo la base de datos.
     services:
       db:
         image: mariadb:11.1
@@ -25,12 +30,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      #Definimos el JDK que vamos a usar
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
 
+      #Añadimos lo siguiente para que arranque la base de datos antes de ejecutar los tests.
       - name: Wait for MariaDB
         run: |
           sudo apt-get update
@@ -40,6 +47,7 @@ jobs:
             sleep 3
           done
 
+      #Ejecutamos los tests.
       - name: Build and run tests
         working-directory: taller/taller
         env:
@@ -48,10 +56,12 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: tallerpass
         run: mvn clean test
 
+      #Si los tests pasan todos correctamente, empaquetamos la aplicación y construimos la imagen 
       - name: Package application
         working-directory: taller/taller
         run: mvn clean package -DskipTests
 
+      #Construimos la imagen de docker utilizando el dockerfile
       - name: Build Docker image
         working-directory: taller/taller
         run: docker build -t taller-app .
