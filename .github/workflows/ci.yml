@@ -15,11 +15,18 @@ jobs:
     services:
       db:
         image: mariadb:11.1
+        ports:
+          - 3306:3306
         env:
           MYSQL_ROOT_PASSWORD: root123
           MYSQL_DATABASE: tallerdb
           MYSQL_USER: talleruser
           MYSQL_PASSWORD: tallerpass
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -proot123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -32,6 +39,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Build and run tests
+        working-directory: taller/taller
         env:
           SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/tallerdb
           SPRING_DATASOURCE_USERNAME: talleruser
@@ -39,4 +47,5 @@ jobs:
         run: mvn clean test
 
       - name: Build Docker image
+        working-directory: taller/taller
         run: docker build -t taller-app .
