@@ -33,6 +33,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Wait for MariaDB
+        run: |
+          sudo apt-get install -y mariadb-client
+          until mysql -h db -u talleruser -ptallerpass -e "SELECT 1"; do
+            echo "Waiting for database..."
+            sleep 3
+          done
+
+
       - name: Build and run tests
         working-directory: taller/taller
         env:
