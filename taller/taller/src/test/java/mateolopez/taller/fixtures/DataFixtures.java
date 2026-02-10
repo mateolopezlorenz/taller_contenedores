@@ -6,52 +6,47 @@ import mateolopez.taller.model.Reparacion;
 import mateolopez.taller.repository.CocheRepository;
 import mateolopez.taller.repository.MecanicoRepository;
 import mateolopez.taller.repository.ReparacionRepository;
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@TestConfiguration
+@Configuration
 public class DataFixtures {
 
     @Bean
-    public List<Mecanico> mecanicos(MecanicoRepository mecanicoRepository) {
-        List<Mecanico> lista = new ArrayList<>();
-        lista.add(mecanicoRepository.save(new Mecanico("Juan", "Pérez")));
-        lista.add(mecanicoRepository.save(new Mecanico("Ana", "Gómez")));
-        lista.add(mecanicoRepository.save(new Mecanico("Luis", "Martínez")));
-        lista.add(mecanicoRepository.save(new Mecanico("María", "López")));
-        lista.add(mecanicoRepository.save(new Mecanico("Carlos", "Fernández")));
-        return lista;
-    }
+    CommandLineRunner initData(CocheRepository cocheRepository,
+                               MecanicoRepository mecanicoRepository,
+                               ReparacionRepository reparacionRepository) {
+        return args -> {
+            List<Mecanico> mecanicos = new ArrayList<>();
+            mecanicos.add(mecanicoRepository.save(new Mecanico("Juan", "Pérez")));
+            mecanicos.add(mecanicoRepository.save(new Mecanico("Ana", "Gómez")));
+            mecanicos.add(mecanicoRepository.save(new Mecanico("Luis", "Martínez")));
+            mecanicos.add(mecanicoRepository.save(new Mecanico("María", "López")));
+            mecanicos.add(mecanicoRepository.save(new Mecanico("Carlos", "Fernández")));
 
-    @Bean
-    public List<Coche> coches(CocheRepository cocheRepository) {
-        List<Coche> lista = new ArrayList<>();
-        lista.add(cocheRepository.save(new Coche("1111AAA", "Toyota", "Corolla")));
-        lista.add(cocheRepository.save(new Coche("2222BBB", "Ford", "Fiesta")));
-        lista.add(cocheRepository.save(new Coche("3333CCC", "Honda", "Civic")));
-        lista.add(cocheRepository.save(new Coche("4444DDD", "BMW", "Serie 3")));
-        lista.add(cocheRepository.save(new Coche("5555EEE", "Audi", "A4")));
-        lista.add(cocheRepository.save(new Coche("6666FFF", "Mercedes", "C200")));
-        lista.add(cocheRepository.save(new Coche("7777GGG", "Kia", "Ceed")));
-        lista.add(cocheRepository.save(new Coche("8888HHH", "Nissan", "Leaf")));
-        lista.add(cocheRepository.save(new Coche("9999III", "Seat", "Ibiza")));
-        lista.add(cocheRepository.save(new Coche("0000JJJ", "Volkswagen", "Golf")));
-        return lista;
-    }
+            List<Coche> coches = new ArrayList<>();
+            coches.add(cocheRepository.save(new Coche("1111AAA", "Toyota", "Corolla")));
+            coches.add(cocheRepository.save(new Coche("2222BBB", "Ford", "Fiesta")));
+            coches.add(cocheRepository.save(new Coche("3333CCC", "Honda", "Civic")));
+            coches.add(cocheRepository.save(new Coche("4444DDD", "BMW", "Serie 3")));
+            coches.add(cocheRepository.save(new Coche("5555EEE", "Audi", "A4")));
+            coches.add(cocheRepository.save(new Coche("6666FFF", "Mercedes", "C200")));
+            coches.add(cocheRepository.save(new Coche("7777GGG", "Kia", "Ceed")));
+            coches.add(cocheRepository.save(new Coche("8888HHH", "Nissan", "Leaf")));
+            coches.add(cocheRepository.save(new Coche("9999III", "Seat", "Ibiza")));
+            coches.add(cocheRepository.save(new Coche("0000JJJ", "Volkswagen", "Golf")));
 
-    @Bean
-    public List<Reparacion> reparaciones(ReparacionRepository reparacionRepository, List<Coche> coches, List<Mecanico> mecanicos) {
-        List<Reparacion> lista = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            lista.add(reparacionRepository.save(new Reparacion(
-                coches.get(i),
-                mecanicos.get(i % mecanicos.size()),
-                "Reparación ejemplo " + (i + 1)
-            )));
-        }
-        return lista;
+            for (int i = 0; i < 10; i++) {
+                reparacionRepository.save(new Reparacion(
+                        coches.get(i),
+                        mecanicos.get(i % mecanicos.size()),
+                        "Reparación ejemplo " + (i + 1)
+                ));
+            }
+        };
     }
 }
