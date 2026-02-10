@@ -14,49 +14,38 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    #Definimos los servicios, que en este caso es solo la base de datos.
-    services:
-      db:
-        image: mariadb:11.1
-        ports:
-          - 3306:3306
-        env:
-          MYSQL_ROOT_PASSWORD: root123
-          MYSQL_DATABASE: tallerdb
-          MYSQL_USER: talleruser
-          MYSQL_PASSWORD: tallerpass
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       #Definimos el JDK que vamos a usar
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
-      #Añadimos lo siguiente para que arranque la base de datos antes de ejecutar los tests.
-      - name: Wait for MariaDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mariadb-client
-          until mysql -h 127.0.0.1 -P 3306 -u talleruser -ptallerpass -e "SELECT 1"; do
-            echo "Waiting for database..."
-            sleep 3
-          done
-
-      #Ejecutamos los tests.
-      - name: Build and run tests
+      #Validar el formato y correctesa del código con Checkstyle
+      - name: Checkstyle linting
         working-directory: taller/taller
-        env:
-          SPRING_DATASOURCE_URL: jdbc:mariadb://127.0.0.1:3306/tallerdb
-          SPRING_DATASOURCE_USERNAME: talleruser
-          SPRING_DATASOURCE_PASSWORD: tallerpass
-        run: mvn clean test
+        run: mvn checkstyle:check
 
-      #Si los tests pasan todos correctamente, empaquetamos la aplicación y construimos la imagen 
+      #Ejecutamos los tests unitarios (usan H2 en memoria, no necesitan MariaDB)
+      - name: Run unit tests
+        working-directory: taller/taller
+        run: mvn test -Dtest="TallerApplicationTests,Tests#testCantidadCoches+testCocheNoNull+testIdsCoche+testMatriculasUnicas+testAddCar+testUpdateCar+testDeleteCar+testAddMecanico+testUpdateMecanico+testDeleteMecanico+testCrearCocheDuplicadoMatricula+testCrearMecanicoDuplicadoNombre"
+
+      #Ejecutamos los tests de integración
+      - name: Run integration tests
+        working-directory: taller/taller
+        run: mvn test -Dtest="Tests#testRelacionCocheReparacion+testRelacionCocheMultipleReparaciones+testAddReparacion+testActualizarReparacion+testEliminarReparacion+testCrearReparacionSinCoche+testCrearReparacionSinMecanico"
+
+      #Ejecutamos los tests de aceptación
+      - name: Run acceptance tests
+        working-directory: taller/taller
+        run: mvn test -Dtest="Tests#testCrearVariasReparaciones+testEliminarCocheConReparaciones+testEliminarMecanicoConReparaciones+testActualizarDescripcionReparacion+testActualizarFechaReparacion+testCrearCocheConMatriculaUnica+testCrearMecanicoNuevo+testCrearReparacionVariasHorasYPrecio+testActualizarTodosLosCamposReparacion+testCantidadCochesDespuesDeAdd+testCantidadMecanicosDespuesDeAdd+testCantidadReparacionesDespuesDeAdd"
+
+      #Si los tests pasan todos correctamente, empaquetamos la aplicación y construimos la imagen
       - name: Package application
         working-directory: taller/taller
         run: mvn clean package -DskipTests
