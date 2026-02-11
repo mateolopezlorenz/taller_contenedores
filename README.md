@@ -225,7 +225,7 @@ El fichero `.github/workflows/ci.yml` define un pipeline con 4 jobs que se ejecu
 
 ### 1. `lint` - Checkstyle Linting
 - Configura JDK 17.
-- Ejecuta `mvn checkstyle:check` para validar el formato y la correctesa del código.
+- Ejecuta `mvn checkstyle:check` para validar el formato y la correcteza del código.
 
 ### 2. `unit-tests` - Tests unitarios e integración
 - Depende del paso `lint`.

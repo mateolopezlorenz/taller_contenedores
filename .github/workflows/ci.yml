@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: main
 
+permissions:
+  contents: read
+
 jobs:
   # Paso 1: Linting con Checkstyle
   lint:
