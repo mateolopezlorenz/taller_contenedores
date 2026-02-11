@@ -244,6 +244,155 @@ El fichero `.github/workflows/ci.yml` define un pipeline con 4 jobs que se ejecu
 - Verifica los endpoints GET y POST principales.
 - Limpia los contenedores al finalizar.
 
+## Pasos de verificación
+
+A continuación se detallan los pasos para comprobar que todo funciona correctamente, tanto en local como en el pipeline CI/CD.
+
+### Paso 1: Verificar el linting (Checkstyle)
+
+Comprueba que el código cumple con las reglas de estilo definidas en `checkstyle.xml`:
+
+```bash
+cd taller/taller
+mvn checkstyle:check
+```
+
+✅ **Resultado esperado:** `BUILD SUCCESS` sin errores de estilo.
+
+### Paso 2: Ejecutar los tests (unitarios, integración y aceptación)
+
+Los tests se ejecutan con una base de datos H2 en memoria, sin necesidad de MariaDB ni Docker:
+
+```bash
+cd taller/taller
+mvn clean test
+```
+
+✅ **Resultado esperado:** `BUILD SUCCESS` con todos los tests pasados (ver sección [Tests](#tests) para el detalle de los 32 tests).
+
+### Paso 3: Construir el WAR y la imagen Docker
+
+```bash
+cd taller/taller
+mvn clean package -DskipTests
+docker build -t taller-app .
+```
+
+✅ **Resultado esperado:** La imagen Docker `taller-app` se construye sin errores.
+
+### Paso 4: Levantar la aplicación con Docker Compose
+
+```bash
+cd taller/taller
+docker compose up -d --build
+```
+
+Espera unos segundos a que la aplicación arranque. Puedes comprobar el estado de los contenedores con:
+
+```bash
+docker compose ps
+```
+
+✅ **Resultado esperado:** Los dos servicios (`db` y `app`) aparecen con estado `Up` / `running`.
+
+### Paso 5: Verificar los endpoints de la API
+
+Una vez la aplicación esté arrancada, comprueba los endpoints principales:
+
+#### 5.1 Listar coches
+
+```bash
+curl -s http://localhost:8080/coches | jq
+```
+
+✅ **Resultado esperado:** Un array JSON con 10 coches (cargados por los fixtures).
+
+#### 5.2 Obtener un coche por ID
+
+```bash
+curl -s http://localhost:8080/coches/1 | jq
+```
+
+✅ **Resultado esperado:** Un objeto JSON con los datos del coche con ID 1.
+
+#### 5.3 Obtener un coche por matrícula
+
+```bash
+curl -s http://localhost:8080/coches/matricula/1111AAA | jq
+```
+
+✅ **Resultado esperado:** Un objeto JSON con el coche cuya matrícula es `1111AAA`.
+
+#### 5.4 Crear un coche nuevo
+
+```bash
+curl -s -X POST http://localhost:8080/coches \
+  -H "Content-Type: application/json" \
+  -d '{"matricula":"NEW1234","marca":"Tesla","modelo":"Model 3"}' | jq
+```
+
+✅ **Resultado esperado:** Un objeto JSON con el coche creado, incluyendo un `id` asignado.
+
+#### 5.5 Listar mecánicos
+
+```bash
+curl -s http://localhost:8080/mecanicos | jq
+```
+
+✅ **Resultado esperado:** Un array JSON con 5 mecánicos.
+
+#### 5.6 Obtener un mecánico por ID
+
+```bash
+curl -s http://localhost:8080/mecanicos/1 | jq
+```
+
+✅ **Resultado esperado:** Un objeto JSON con los datos del mecánico con ID 1.
+
+#### 5.7 Listar reparaciones
+
+```bash
+curl -s http://localhost:8080/reparaciones | jq
+```
+
+✅ **Resultado esperado:** Un array JSON con 10 reparaciones, cada una con su coche y mecánico asociados.
+
+#### 5.8 Reparaciones por coche
+
+```bash
+curl -s http://localhost:8080/reparaciones/coche/1 | jq
+```
+
+✅ **Resultado esperado:** Un array JSON con las reparaciones asociadas al coche con ID 1.
+
+#### 5.9 Reparaciones por mecánico
+
+```bash
+curl -s http://localhost:8080/reparaciones/mecanico/1 | jq
+```
+
+✅ **Resultado esperado:** Un array JSON con las reparaciones del mecánico con ID 1.
+
+### Paso 6: Parar la aplicación
+
+```bash
+cd taller/taller
+docker compose down -v
+```
+
+✅ **Resultado esperado:** Todos los contenedores se detienen y los volúmenes se eliminan.
+
+### Paso 7: Verificar el pipeline CI/CD
+
+Al hacer **push** o abrir un **pull request** a la rama `main`, el pipeline de GitHub Actions ejecuta automáticamente los siguientes jobs en orden:
+
+1. **Lint** → Checkstyle
+2. **Unit Tests** → Tests con H2
+3. **Docker Build** → Construcción de la imagen Docker
+4. **Acceptance Tests** → Verificación de endpoints con Docker Compose
+
+✅ **Resultado esperado:** Los 4 jobs aparecen en verde (✓) en la pestaña **Actions** del repositorio en GitHub.
+
 ## Conclusión
 
 Con esta práctica se ha conseguido:
