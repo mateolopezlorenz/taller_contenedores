@@ -117,6 +117,8 @@ Todos los endpoints devuelven **JSON**.
 ### Ejemplos con curl
 
 ```bash
+# --- Coches ---
+
 # Listar todos los coches
 curl -s http://localhost:8080/coches | jq
 
@@ -131,17 +133,37 @@ curl -s -X POST http://localhost:8080/coches \
   -H "Content-Type: application/json" \
   -d '{"matricula":"NEW1234","marca":"Tesla","modelo":"Model 3"}' | jq
 
+# --- Mecánicos ---
+
 # Listar todos los mecánicos
 curl -s http://localhost:8080/mecanicos | jq
 
+# Obtener un mecánico por ID
+curl -s http://localhost:8080/mecanicos/1 | jq
+
+# Crear un nuevo mecánico
+curl -s -X POST http://localhost:8080/mecanicos \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Pedro Sánchez","especialidad":"Electricidad"}' | jq
+
+# --- Reparaciones ---
+
 # Listar todas las reparaciones
 curl -s http://localhost:8080/reparaciones | jq
+
+# Obtener una reparación por ID
+curl -s http://localhost:8080/reparaciones/1 | jq
 
 # Reparaciones de un coche concreto
 curl -s http://localhost:8080/reparaciones/coche/1 | jq
 
 # Reparaciones de un mecánico concreto
 curl -s http://localhost:8080/reparaciones/mecanico/1 | jq
+
+# Crear una nueva reparación (usando IDs de coche y mecánico existentes)
+curl -s -X POST http://localhost:8080/reparaciones \
+  -H "Content-Type: application/json" \
+  -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Cambio de aceite","horas":2,"precio":120.0}' | jq
 ```
 
 ## Tests

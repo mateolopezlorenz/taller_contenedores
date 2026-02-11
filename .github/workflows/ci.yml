@@ -144,6 +144,48 @@ jobs:
           echo "GET /mecanicos/1 returned status: $response"
           [ "$response" = "200" ] || exit 1
 
+      - name: Test GET /coches/matricula/{matricula} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches/matricula/1111AAA)
+          echo "GET /coches/matricula/1111AAA returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test POST /mecanicos endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/mecanicos \
+            -H "Content-Type: application/json" \
+            -d '{"nombre":"TestMecanico","especialidad":"TestEspecialidad"}')
+          status=$(echo "$response" | tail -1)
+          echo "POST /mecanicos returned status: $status"
+          [ "$status" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/1)
+          echo "GET /reparaciones/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/coche/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/coche/1)
+          echo "GET /reparaciones/coche/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/mecanico/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/mecanico/1)
+          echo "GET /reparaciones/mecanico/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test POST /reparaciones endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/reparaciones \
+            -H "Content-Type: application/json" \
+            -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Test reparacion","horas":2,"precio":120.0}')
+          status=$(echo "$response" | tail -1)
+          echo "POST /reparaciones returned status: $status"
+          [ "$status" = "200" ] || exit 1
+
       - name: Stop Docker Compose
         if: always()
         working-directory: taller/taller
