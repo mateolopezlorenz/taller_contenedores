@@ -116,8 +116,38 @@ Todos los endpoints devuelven **JSON**.
 
 ### Ejemplos con curl
 
+> **⚠️ Importante:** Estos comandos se ejecutan en una **terminal/consola** de tu ordenador, **después** de levantar la aplicación con Docker Compose (ver [Puesta en marcha](#puesta-en-marcha)). Necesitas tener instalados `curl` y opcionalmente `jq` para formatear el JSON.
+
+Los comandos POST deben ejecutarse **primero** para crear datos, ya que la base de datos arranca vacía al usar Docker Compose:
+
 ```bash
-# --- Coches ---
+# ============================================================
+# EJECUTAR DESDE: cualquier terminal con la aplicación levantada
+# REQUISITO PREVIO:
+#   cd taller/taller
+#   mvn clean package -DskipTests
+#   docker compose up -d --build
+#   # Esperar ~15 segundos a que arranque
+# ============================================================
+
+# --- 1. Crear datos (POST) ---
+
+# Crear un coche
+curl -s -X POST http://localhost:8080/coches \
+  -H "Content-Type: application/json" \
+  -d '{"matricula":"TEST123","marca":"Tesla","modelo":"Model 3"}' | jq
+
+# Crear un mecánico
+curl -s -X POST http://localhost:8080/mecanicos \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Pedro García","especialidad":"Electricidad"}' | jq
+
+# Crear una reparación (usa los IDs de coche y mecánico creados arriba)
+curl -s -X POST http://localhost:8080/reparaciones \
+  -H "Content-Type: application/json" \
+  -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Cambio de aceite","horas":2,"precio":120.0}' | jq
+
+# --- 2. Consultar datos (GET) ---
 
 # Listar todos los coches
 curl -s http://localhost:8080/coches | jq
@@ -126,27 +156,13 @@ curl -s http://localhost:8080/coches | jq
 curl -s http://localhost:8080/coches/1 | jq
 
 # Obtener un coche por matrícula
-curl -s http://localhost:8080/coches/matricula/1111AAA | jq
-
-# Crear un nuevo coche
-curl -s -X POST http://localhost:8080/coches \
-  -H "Content-Type: application/json" \
-  -d '{"matricula":"NEW1234","marca":"Tesla","modelo":"Model 3"}' | jq
-
-# --- Mecánicos ---
+curl -s http://localhost:8080/coches/matricula/TEST123 | jq
 
 # Listar todos los mecánicos
 curl -s http://localhost:8080/mecanicos | jq
 
 # Obtener un mecánico por ID
 curl -s http://localhost:8080/mecanicos/1 | jq
-
-# Crear un nuevo mecánico
-curl -s -X POST http://localhost:8080/mecanicos \
-  -H "Content-Type: application/json" \
-  -d '{"nombre":"Pedro Sánchez","especialidad":"Electricidad"}' | jq
-
-# --- Reparaciones ---
 
 # Listar todas las reparaciones
 curl -s http://localhost:8080/reparaciones | jq
@@ -159,12 +175,19 @@ curl -s http://localhost:8080/reparaciones/coche/1 | jq
 
 # Reparaciones de un mecánico concreto
 curl -s http://localhost:8080/reparaciones/mecanico/1 | jq
-
-# Crear una nueva reparación (usando IDs de coche y mecánico existentes)
-curl -s -X POST http://localhost:8080/reparaciones \
-  -H "Content-Type: application/json" \
-  -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Cambio de aceite","horas":2,"precio":120.0}' | jq
 ```
+
+### Script de verificación automática
+
+También se incluye un **script ejecutable** que prueba automáticamente los 12 endpoints y muestra el resultado:
+
+```bash
+cd taller/taller
+chmod +x test_endpoints.sh
+./test_endpoints.sh
+```
+
+El script crea datos con POST, verifica todos los GET y muestra un resumen con ✅/❌ por cada endpoint.
 
 ## Tests
 
@@ -319,81 +342,17 @@ docker compose ps
 
 ### Paso 5: Verificar los endpoints de la API
 
-Una vez la aplicación esté arrancada, comprueba los endpoints principales:
-
-#### 5.1 Listar coches
+Una vez la aplicación esté arrancada, ejecuta el script de verificación automática desde una **terminal**:
 
 ```bash
-curl -s http://localhost:8080/coches | jq
+cd taller/taller
+chmod +x test_endpoints.sh
+./test_endpoints.sh
 ```
 
-✅ **Resultado esperado:** Un array JSON con 10 coches (cargados por los fixtures).
+✅ **Resultado esperado:** Los 12 endpoints muestran ✅ y el resumen indica `12 correctos, 0 fallidos`.
 
-#### 5.2 Obtener un coche por ID
-
-```bash
-curl -s http://localhost:8080/coches/1 | jq
-```
-
-✅ **Resultado esperado:** Un objeto JSON con los datos del coche con ID 1.
-
-#### 5.3 Obtener un coche por matrícula
-
-```bash
-curl -s http://localhost:8080/coches/matricula/1111AAA | jq
-```
-
-✅ **Resultado esperado:** Un objeto JSON con el coche cuya matrícula es `1111AAA`.
-
-#### 5.4 Crear un coche nuevo
-
-```bash
-curl -s -X POST http://localhost:8080/coches \
-  -H "Content-Type: application/json" \
-  -d '{"matricula":"NEW1234","marca":"Tesla","modelo":"Model 3"}' | jq
-```
-
-✅ **Resultado esperado:** Un objeto JSON con el coche creado, incluyendo un `id` asignado.
-
-#### 5.5 Listar mecánicos
-
-```bash
-curl -s http://localhost:8080/mecanicos | jq
-```
-
-✅ **Resultado esperado:** Un array JSON con 5 mecánicos.
-
-#### 5.6 Obtener un mecánico por ID
-
-```bash
-curl -s http://localhost:8080/mecanicos/1 | jq
-```
-
-✅ **Resultado esperado:** Un objeto JSON con los datos del mecánico con ID 1.
-
-#### 5.7 Listar reparaciones
-
-```bash
-curl -s http://localhost:8080/reparaciones | jq
-```
-
-✅ **Resultado esperado:** Un array JSON con 10 reparaciones, cada una con su coche y mecánico asociados.
-
-#### 5.8 Reparaciones por coche
-
-```bash
-curl -s http://localhost:8080/reparaciones/coche/1 | jq
-```
-
-✅ **Resultado esperado:** Un array JSON con las reparaciones asociadas al coche con ID 1.
-
-#### 5.9 Reparaciones por mecánico
-
-```bash
-curl -s http://localhost:8080/reparaciones/mecanico/1 | jq
-```
-
-✅ **Resultado esperado:** Un array JSON con las reparaciones del mecánico con ID 1.
+También puedes ejecutar los curls manualmente en orden (ver sección [Ejemplos con curl](#ejemplos-con-curl)).
 
 ### Paso 6: Parar la aplicación
 
