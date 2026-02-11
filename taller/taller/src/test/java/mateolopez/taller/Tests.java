@@ -308,34 +308,34 @@ public class Tests {
     }
 
     @Test
-void testCantidadCochesDespuesDeAdd() {
-    int antes = cocheRepository.findAll().size();
-    Coche c = new Coche("EXTRA123", "Ford", "Fiesta");
-    cocheRepository.save(c);
-    entityManager.flush();
-    int despues = cocheRepository.findAll().size();
-    assertEquals(antes + 1, despues);
-}
+    void testCantidadCochesDespuesDeAdd() {
+        int antes = cocheRepository.findAll().size();
+        Coche c = new Coche("EXTRA123", "Ford", "Fiesta");
+        cocheRepository.save(c);
+        entityManager.flush();
+        int despues = cocheRepository.findAll().size();
+        assertEquals(antes + 1, despues);
+    }
 
-@Test
-void testCantidadMecanicosDespuesDeAdd() {
-    int antes = mecanicoRepository.findAll().size();
-    Mecanico m = new Mecanico("ExtraNombre", "ExtraApellido");
-    mecanicoRepository.save(m);
-    entityManager.flush();
-    int despues = mecanicoRepository.findAll().size();
-    assertEquals(antes + 1, despues);
-}
+    @Test
+    void testCantidadMecanicosDespuesDeAdd() {
+        int antes = mecanicoRepository.findAll().size();
+        Mecanico m = new Mecanico("ExtraNombre", "ExtraApellido");
+        mecanicoRepository.save(m);
+        entityManager.flush();
+        int despues = mecanicoRepository.findAll().size();
+        assertEquals(antes + 1, despues);
+    }
 
-@Test
-void testCantidadReparacionesDespuesDeAdd() {
-    int antes = reparacionRepository.findAll().size();
-    Coche c = cocheRepository.findAll().get(0);
-    Mecanico m = mecanicoRepository.findAll().get(0);
-    Reparacion r = new Reparacion(c, m, LocalDate.now(), "Extra reparación", 2, 100.0);
-    reparacionRepository.save(r);
-    entityManager.flush();
-    int despues = reparacionRepository.findAll().size();
-    assertEquals(antes + 1, despues);
-}
+    @Test
+    void testCantidadReparacionesDespuesDeAdd() {
+        int antes = reparacionRepository.findAll().size();
+        Coche c = cocheRepository.findAll().get(0);
+        Mecanico m = mecanicoRepository.findAll().get(0);
+        Reparacion r = new Reparacion(c, m, LocalDate.now(), "Extra reparación", 2, 100.0);
+        reparacionRepository.save(r);
+        entityManager.flush();
+        int despues = reparacionRepository.findAll().size();
+        assertEquals(antes + 1, despues);
+    }
 }
