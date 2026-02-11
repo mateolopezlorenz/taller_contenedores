@@ -1,67 +1,150 @@
 name: CI/CD Fase 3
 
-#Cuando se sube algo a la rama que especificamos a continuación, se ejecuta el workflow.
 on:
-  #Especificamos la rama donde se ejecuta a la hora de subir archivos (hacer push).
   push:
     branches: main
-  #Especificamos la rama donde se ejecuta a la hora de hacer un pull request.
   pull_request:
     branches: main
 
-#Definimos los jobs que se ejecutarán a la hora de hacer push o pull request.
+permissions:
+  contents: read
+
 jobs:
-  build-and-test:
+  # Paso 1: Linting con Checkstyle
+  lint:
+    name: Checkstyle Linting
     runs-on: ubuntu-latest
-
-    #Definimos los servicios, que en este caso es solo la base de datos.
-    services:
-      db:
-        image: mariadb:11.1
-        ports:
-          - 3306:3306
-        env:
-          MYSQL_ROOT_PASSWORD: root123
-          MYSQL_DATABASE: tallerdb
-          MYSQL_USER: talleruser
-          MYSQL_PASSWORD: tallerpass
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      #Definimos el JDK que vamos a usar
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
-      #Añadimos lo siguiente para que arranque la base de datos antes de ejecutar los tests.
-      - name: Wait for MariaDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mariadb-client
-          until mysql -h 127.0.0.1 -P 3306 -u talleruser -ptallerpass -e "SELECT 1"; do
-            echo "Waiting for database..."
-            sleep 3
-          done
-
-      #Ejecutamos los tests.
-      - name: Build and run tests
+      - name: Run Checkstyle
         working-directory: taller/taller
-        env:
-          SPRING_DATASOURCE_URL: jdbc:mariadb://127.0.0.1:3306/tallerdb
-          SPRING_DATASOURCE_USERNAME: talleruser
-          SPRING_DATASOURCE_PASSWORD: tallerpass
+        run: mvn checkstyle:check
+
+  # Paso 2: Tests unitarios e integración con H2
+  unit-tests:
+    name: Unit and Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Run tests with H2
+        working-directory: taller/taller
         run: mvn clean test
 
-      #Si los tests pasan todos correctamente, empaquetamos la aplicación y construimos la imagen 
+  # Paso 3: Construcción de la imagen Docker
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Package application
         working-directory: taller/taller
         run: mvn clean package -DskipTests
 
-      #Construimos la imagen de docker utilizando el dockerfile
       - name: Build Docker image
         working-directory: taller/taller
         run: docker build -t taller-app .
+
+  # Paso 4: Tests de aceptación con Docker Compose
+  acceptance-tests:
+    name: Acceptance Tests (Docker Compose)
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Package application
+        working-directory: taller/taller
+        run: mvn clean package -DskipTests
+
+      - name: Start services with Docker Compose
+        working-directory: taller/taller
+        run: docker compose up -d --build
+
+      - name: Wait for application to be ready
+        run: |
+          echo "Waiting for application to start..."
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:8080/coches > /dev/null 2>&1; then
+              echo "Application is ready!"
+              break
+            fi
+            echo "Attempt $i: waiting..."
+            sleep 5
+          done
+
+      - name: Test GET /coches endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches)
+          echo "GET /coches returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /mecanicos endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/mecanicos)
+          echo "GET /mecanicos returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones)
+          echo "GET /reparaciones returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test POST /coches endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/coches \
+            -H "Content-Type: application/json" \
+            -d '{"matricula":"TEST123","marca":"TestMarca","modelo":"TestModelo"}')
+          status=$(echo "$response" | tail -1)
+          echo "POST /coches returned status: $status"
+          [ "$status" = "200" ] || exit 1
+
+      - name: Test GET /coches/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches/1)
+          echo "GET /coches/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /mecanicos/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/mecanicos/1)
+          echo "GET /mecanicos/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Stop Docker Compose
+        if: always()
+        working-directory: taller/taller
+        run: docker compose down -v
