@@ -105,19 +105,19 @@ jobs:
             sleep 5
           done
 
-      - name: Test GET /coches endpoint
+      - name: Test GET /coches endpoint (lista vacía)
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches)
           echo "GET /coches returned status: $response"
           [ "$response" = "200" ] || exit 1
 
-      - name: Test GET /mecanicos endpoint
+      - name: Test GET /mecanicos endpoint (lista vacía)
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/mecanicos)
           echo "GET /mecanicos returned status: $response"
           [ "$response" = "200" ] || exit 1
 
-      - name: Test GET /reparaciones endpoint
+      - name: Test GET /reparaciones endpoint (lista vacía)
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones)
           echo "GET /reparaciones returned status: $response"
@@ -132,16 +132,58 @@ jobs:
           echo "POST /coches returned status: $status"
           [ "$status" = "200" ] || exit 1
 
+      - name: Test POST /mecanicos endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/mecanicos \
+            -H "Content-Type: application/json" \
+            -d '{"nombre":"TestMecanico","especialidad":"TestEspecialidad"}')
+          status=$(echo "$response" | tail -1)
+          echo "POST /mecanicos returned status: $status"
+          [ "$status" = "200" ] || exit 1
+
+      - name: Test POST /reparaciones endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/reparaciones \
+            -H "Content-Type: application/json" \
+            -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Test reparacion","horas":2,"precio":120.0}')
+          status=$(echo "$response" | tail -1)
+          echo "POST /reparaciones returned status: $status"
+          [ "$status" = "200" ] || exit 1
+
       - name: Test GET /coches/{id} endpoint
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches/1)
           echo "GET /coches/1 returned status: $response"
           [ "$response" = "200" ] || exit 1
 
+      - name: Test GET /coches/matricula/{matricula} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/coches/matricula/TEST123)
+          echo "GET /coches/matricula/TEST123 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
       - name: Test GET /mecanicos/{id} endpoint
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/mecanicos/1)
           echo "GET /mecanicos/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/1)
+          echo "GET /reparaciones/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/coche/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/coche/1)
+          echo "GET /reparaciones/coche/1 returned status: $response"
+          [ "$response" = "200" ] || exit 1
+
+      - name: Test GET /reparaciones/mecanico/{id} endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/reparaciones/mecanico/1)
+          echo "GET /reparaciones/mecanico/1 returned status: $response"
           [ "$response" = "200" ] || exit 1
 
       - name: Stop Docker Compose

@@ -116,7 +116,39 @@ Todos los endpoints devuelven **JSON**.
 
 ### Ejemplos con curl
 
+> **⚠️ Importante:** Estos comandos se ejecutan en una **terminal/consola** de tu ordenador, **después** de levantar la aplicación con Docker Compose (ver [Puesta en marcha](#puesta-en-marcha)). Necesitas tener instalados `curl` y opcionalmente `jq` para formatear el JSON.
+
+Los comandos POST deben ejecutarse **primero** para crear datos, ya que la base de datos arranca vacía al usar Docker Compose:
+
 ```bash
+# ============================================================
+# EJECUTAR DESDE: cualquier terminal con la aplicación levantada
+# REQUISITO PREVIO:
+#   cd taller/taller
+#   mvn clean package -DskipTests
+#   docker compose up -d --build
+#   # Esperar ~15 segundos a que arranque
+# ============================================================
+
+# --- 1. Crear datos (POST) ---
+
+# Crear un coche
+curl -s -X POST http://localhost:8080/coches \
+  -H "Content-Type: application/json" \
+  -d '{"matricula":"TEST123","marca":"Tesla","modelo":"Model 3"}' | jq
+
+# Crear un mecánico
+curl -s -X POST http://localhost:8080/mecanicos \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Pedro García","especialidad":"Electricidad"}' | jq
+
+# Crear una reparación (usa los IDs de coche y mecánico creados arriba)
+curl -s -X POST http://localhost:8080/reparaciones \
+  -H "Content-Type: application/json" \
+  -d '{"coche":{"id":1},"mecanico":{"id":1},"fecha":"2025-06-15","descripcion":"Cambio de aceite","horas":2,"precio":120.0}' | jq
+
+# --- 2. Consultar datos (GET) ---
+
 # Listar todos los coches
 curl -s http://localhost:8080/coches | jq
 
@@ -124,18 +156,19 @@ curl -s http://localhost:8080/coches | jq
 curl -s http://localhost:8080/coches/1 | jq
 
 # Obtener un coche por matrícula
-curl -s http://localhost:8080/coches/matricula/1111AAA | jq
-
-# Crear un nuevo coche
-curl -s -X POST http://localhost:8080/coches \
-  -H "Content-Type: application/json" \
-  -d '{"matricula":"NEW1234","marca":"Tesla","modelo":"Model 3"}' | jq
+curl -s http://localhost:8080/coches/matricula/TEST123 | jq
 
 # Listar todos los mecánicos
 curl -s http://localhost:8080/mecanicos | jq
 
+# Obtener un mecánico por ID
+curl -s http://localhost:8080/mecanicos/1 | jq
+
 # Listar todas las reparaciones
 curl -s http://localhost:8080/reparaciones | jq
+
+# Obtener una reparación por ID
+curl -s http://localhost:8080/reparaciones/1 | jq
 
 # Reparaciones de un coche concreto
 curl -s http://localhost:8080/reparaciones/coche/1 | jq
@@ -143,6 +176,18 @@ curl -s http://localhost:8080/reparaciones/coche/1 | jq
 # Reparaciones de un mecánico concreto
 curl -s http://localhost:8080/reparaciones/mecanico/1 | jq
 ```
+
+### Script de verificación automática
+
+También se incluye un **script ejecutable** que prueba automáticamente los 12 endpoints y muestra el resultado:
+
+```bash
+cd taller/taller
+chmod +x test_endpoints.sh
+./test_endpoints.sh
+```
+
+El script crea datos con POST, verifica todos los GET y muestra un resumen con ✅/❌ por cada endpoint.
 
 ## Tests
 
@@ -243,6 +288,91 @@ El fichero `.github/workflows/ci.yml` define un pipeline con 4 jobs que se ejecu
 - Ejecuta tests de aceptación contra los endpoints reales usando `curl`.
 - Verifica los endpoints GET y POST principales.
 - Limpia los contenedores al finalizar.
+
+## Pasos de verificación
+
+A continuación se detallan los pasos para comprobar que todo funciona correctamente, tanto en local como en el pipeline CI/CD.
+
+### Paso 1: Verificar el linting (Checkstyle)
+
+Comprueba que el código cumple con las reglas de estilo definidas en `checkstyle.xml`:
+
+```bash
+cd taller/taller
+mvn checkstyle:check
+```
+
+✅ **Resultado esperado:** `BUILD SUCCESS` sin errores de estilo.
+
+### Paso 2: Ejecutar los tests (unitarios, integración y aceptación)
+
+Los tests se ejecutan con una base de datos H2 en memoria, sin necesidad de MariaDB ni Docker:
+
+```bash
+cd taller/taller
+mvn clean test
+```
+
+✅ **Resultado esperado:** `BUILD SUCCESS` con todos los tests pasados (ver sección [Tests](#tests) para el detalle de los 32 tests).
+
+### Paso 3: Construir el WAR y la imagen Docker
+
+```bash
+cd taller/taller
+mvn clean package -DskipTests
+docker build -t taller-app .
+```
+
+✅ **Resultado esperado:** La imagen Docker `taller-app` se construye sin errores.
+
+### Paso 4: Levantar la aplicación con Docker Compose
+
+```bash
+cd taller/taller
+docker compose up -d --build
+```
+
+Espera unos segundos a que la aplicación arranque. Puedes comprobar el estado de los contenedores con:
+
+```bash
+docker compose ps
+```
+
+✅ **Resultado esperado:** Los dos servicios (`db` y `app`) aparecen con estado `Up` / `running`.
+
+### Paso 5: Verificar los endpoints de la API
+
+Una vez la aplicación esté arrancada, ejecuta el script de verificación automática desde una **terminal**:
+
+```bash
+cd taller/taller
+chmod +x test_endpoints.sh
+./test_endpoints.sh
+```
+
+✅ **Resultado esperado:** Los 12 endpoints muestran ✅ y el resumen indica `12 correctos, 0 fallidos`.
+
+También puedes ejecutar los curls manualmente en orden (ver sección [Ejemplos con curl](#ejemplos-con-curl)).
+
+### Paso 6: Parar la aplicación
+
+```bash
+cd taller/taller
+docker compose down -v
+```
+
+✅ **Resultado esperado:** Todos los contenedores se detienen y los volúmenes se eliminan.
+
+### Paso 7: Verificar el pipeline CI/CD
+
+Al hacer **push** o abrir un **pull request** a la rama `main`, el pipeline de GitHub Actions ejecuta automáticamente los siguientes jobs en orden:
+
+1. **Lint** → Checkstyle
+2. **Unit Tests** → Tests con H2
+3. **Docker Build** → Construcción de la imagen Docker
+4. **Acceptance Tests** → Verificación de endpoints con Docker Compose
+
+✅ **Resultado esperado:** Los 4 jobs aparecen en verde (✓) en la pestaña **Actions** del repositorio en GitHub.
 
 ## Conclusión
 
